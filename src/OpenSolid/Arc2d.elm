@@ -81,6 +81,21 @@ import OpenSolid.Polyline2d as Polyline2d exposing (Polyline2d)
 import OpenSolid.Vector2d as Vector2d exposing (Vector2d)
 
 
+{--Imports for example verification using elm-verify-examples
+
+
+    import OpenSolid.Arc2d as Arc2d
+    import OpenSolid.Axis2d as Axis2d
+    import OpenSolid.Point2d as Point2d
+    import OpenSolid.Polyline2d as Polyline2d
+    import OpenSolid.Vector2d as Vector2d
+
+    import Doc.ExampleHelpers.OpenSolid.Arc2d exposing (..)
+
+    import OpenSolid.Geometry.Expect as Expect
+-}
+
+
 {-| -}
 type alias Arc2d =
     Internal.Arc2d
@@ -98,6 +113,7 @@ type alias Arc2d =
             }
 
     Arc2d.endPoint exampleArc
+    | Expect.point2d
     --> Point2d.fromCoordinates ( 1, 3 )
 
 A positive swept angle means that the arc is formed by rotating the start point
@@ -119,6 +135,7 @@ points are collinear, returns `Nothing`.
         , Point2d.fromCoordinates ( 1, 0 )
         , Point2d.fromCoordinates ( 0, 1 )
         )
+    | Expect.maybe Expect.arc2d
     --> Just
     -->     (Arc2d.with
     -->         { centerPoint =
@@ -133,6 +150,7 @@ points are collinear, returns `Nothing`.
         , Point2d.origin
         , Point2d.fromCoordinates ( 0, 1 )
         )
+    | Expect.maybe Expect.arc2d
     --> Just
     -->     (Arc2d.with
     -->         { centerPoint =
@@ -274,6 +292,7 @@ For example:
         , radius = 1
         , sweptAngle = Arc2d.smallPositive
         }
+    | Expect.maybe Expect.arc2d
     --> Just
     -->     (Arc2d.with
     -->         { startPoint =
@@ -289,6 +308,7 @@ For example:
         , radius = 1
         , sweptAngle = Arc2d.smallNegative
         }
+    | Expect.maybe Expect.arc2d
     --> Just
     -->     (Arc2d.with
     -->         { startPoint =
@@ -305,6 +325,7 @@ For example:
         , radius = 1
         , sweptAngle = Arc2d.largePositive
         }
+    | Expect.maybe Expect.arc2d
     --> Just
     -->     (Arc2d.with
     -->         { startPoint =
@@ -321,6 +342,7 @@ For example:
         , radius = 1
         , sweptAngle = Arc2d.largeNegative
         }
+    | Expect.maybe Expect.arc2d
     --> Just
     -->     (Arc2d.with
     -->         { startPoint =
@@ -336,6 +358,7 @@ For example:
         , radius = 2
         , sweptAngle = Arc2d.smallPositive
         }
+    | Expect.maybe Expect.arc2d
     --> Just
     -->     (Arc2d.with
     -->         { startPoint =
@@ -456,6 +479,7 @@ fromEndpoints { startPoint, endPoint, radius, sweptAngle } =
 {-| Get the center point of an arc.
 
     Arc2d.centerPoint exampleArc
+    | Expect.point2d
     --> Point2d.fromCoordinates ( 1, 1 )
 
 -}
@@ -467,6 +491,7 @@ centerPoint (Internal.Arc2d properties) =
 {-| Get the radius of an arc.
 
     Arc2d.radius exampleArc
+    | Expect.approximately
     --> 2
 
 -}
@@ -478,6 +503,7 @@ radius arc =
 {-| Get the start point of an arc.
 
     Arc2d.startPoint exampleArc
+    | Expect.point2d
     --> Point2d.fromCoordinates ( 3, 1 )
 
 -}
@@ -489,6 +515,7 @@ startPoint (Internal.Arc2d properties) =
 {-| Get the end point of an arc.
 
     Arc2d.endPoint exampleArc
+    | Expect.point2d
     --> Point2d.fromCoordinates ( 1, 3 )
 
 -}
@@ -500,6 +527,7 @@ endPoint arc =
 {-| Get the swept angle of an arc in radians.
 
     Arc2d.sweptAngle exampleArc
+    | Expect.approximately
     --> 1.5708
 
 The result will be positive for a counterclockwise arc and negative for a
@@ -516,6 +544,7 @@ sweptAngle (Internal.Arc2d properties) =
 end point.
 
     Arc2d.pointOn exampleArc 0.5
+    | Expect.point2d
     --> Point2d.fromCoordinates ( 2.4142, 2.4142 )
 
 -}
@@ -532,9 +561,11 @@ pointOn arc parameter =
 start point of the arc and 1 at the end point of the arc.
 
     Arc2d.derivative exampleArc 0
+    | Expect.vector2d
     --> Vector2d.fromComponents ( 0, 3.1416 )
 
     Arc2d.derivative exampleArc 1
+    | Expect.vector2d
     --> Vector2d.fromComponents ( -3.1416, 0 )
 
 -}
@@ -556,16 +587,19 @@ derivative arc parameter =
 at that parameter value and the derivative with respect to that parameter value.
 
     Arc2d.evaluate exampleArc 0
+    | Expect.arc2dEvaluation
     --> ( Point2d.fromCoordinates ( 3, 1 )
     --> , Vector2d.fromComponents ( 0, 3.1416 )
     --> )
 
     Arc2d.evaluate exampleArc 0.5
+    | Expect.arc2dEvaluation
     --> ( Point2d.fromCoordinates ( 2.4142, 2.4142 )
     --> , Vector2d.fromComponents ( -2.2214, 2.2214 )
     --> )
 
     Arc2d.evaluate exampleArc 1
+    | Expect.arc2dEvaluation
     --> ( Point2d.fromCoordinates ( 1, 3 )
     --> , Vector2d.fromComponents ( -3.1416, 0 )
     --> )
@@ -636,6 +670,7 @@ numApproximationSegments tolerance arc =
 {-| Approximate an arc as a polyline, within the specified tolerance.
 
     Arc2d.toPolyline 0.1 exampleArc
+    | Expect.polyline2d
     --> Polyline2d.fromVertices
     -->     [ Point2d.fromCoordinates ( 3, 1 )
     -->     , Point2d.fromCoordinates ( 2.732, 2 )
@@ -666,6 +701,7 @@ toPolyline tolerance arc =
 point and vice versa.
 
     Arc2d.reverse exampleArc
+    | Expect.arc2d
     --> Arc2d.with
     -->     { startPoint =
     -->         Point2d.fromCoordinates ( 1, 3 )
@@ -690,6 +726,7 @@ reverse arc =
         Point2d.fromCoordinates ( 0, 1 )
 
     Arc2d.scaleAbout point 2 exampleArc
+    | Expect.arc2d
     --> Arc2d.with
     -->     { startPoint =
     -->         Point2d.fromCoordinates ( 6, 1 )
@@ -718,7 +755,8 @@ scaleAbout point scale arc =
 
 {-| Rotate an arc around a given point by a given angle.
 
-    Arc2d.rotateAround Point2d.origin (degrees 90)
+    Arc2d.rotateAround Point2d.origin (degrees 90) exampleArc
+    | Expect.arc2d
     --> Arc2d.with
     -->     { startPoint =
     -->         Point2d.fromCoordinates ( -1, 3 )
@@ -748,6 +786,7 @@ rotateAround point angle =
         Vector2d.fromComponents ( 2, 3 )
 
     Arc2d.translateBy displacement exampleArc
+    | Expect.arc2d
     --> Arc2d.with
     -->     { startPoint =
     -->         Point2d.fromCoordinates ( 5, 4 )
@@ -773,6 +812,7 @@ translateBy displacement arc =
 {-| Mirror an arc across a given axis.
 
     Arc2d.mirrorAcross Axis2d.y exampleArc
+    | Expect.arc2d
     --> Arc2d.with
     -->     { startPoint =
     -->         Point2d.fromCoordinates ( -3, 1 )
@@ -803,6 +843,7 @@ coordinates relative to a given reference frame.
         Frame2d.atPoint (Point2d.fromCoordinates ( 1, 2 ))
 
     Arc2d.relativeTo localFrame exampleArc
+    | Expect.arc2d
     --> Arc2d.with
     -->     { startPoint =
     -->         Point2d.fromCoordinates ( 2, -1 )
@@ -836,6 +877,7 @@ given reference frame, and return that arc expressed in global coordinates.
         Frame2d.atPoint (Point2d.fromCoordinates ( 1, 2 ))
 
     Arc2d.placeIn localFrame exampleArc
+    | Expect.arc2d
     --> Arc2d.with
     -->     { startPoint =
     -->         Point2d.fromCoordinates ( 4, 3 )

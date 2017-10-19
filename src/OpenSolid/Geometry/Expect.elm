@@ -17,6 +17,7 @@ module OpenSolid.Geometry.Expect
         , angleWithin
         , approximately
         , arc2d
+        , arc2dEvaluation
         , arc3d
         , axis2d
         , axis3d
@@ -39,6 +40,7 @@ module OpenSolid.Geometry.Expect
         , lineSegment2dWithin
         , lineSegment3d
         , lineSegment3dWithin
+        , maybe
         , plane3d
         , point2d
         , point2dWithin
@@ -101,22 +103,34 @@ import OpenSolid.Triangle2d as Triangle2d exposing (Triangle2d)
 import OpenSolid.Triangle3d as Triangle3d exposing (Triangle3d)
 import OpenSolid.Vector2d as Vector2d exposing (Vector2d)
 import OpenSolid.Vector3d as Vector3d exposing (Vector3d)
+import Test.Runner.Failure exposing (Reason(Equality), format)
 
 
 type alias Comparison a =
     a -> a -> Bool
 
 
-expect : Comparison a -> (a -> a -> Expectation)
-expect comparison first second =
+expect : String -> Comparison a -> (a -> a -> Expectation)
+expect description comparison first second =
     if comparison first second then
         Expect.pass
     else
         let
+            {- Test.Runner.Failure.format is deprecated but it seems to be the only way to get
+               the same nicely formatted output than e.g. Expect.equal while also be able to provide a custom description
+            -}
             message =
-                "Expected " ++ toString first ++ ", got " ++ toString second
+                format description (Equality (toString first) (toString second))
         in
         Expect.fail message
+
+
+maybe : (a -> a -> Expectation) -> Maybe a -> Maybe a -> Expectation
+maybe comparison first second =
+    Maybe.map2 comparison first second
+        -- withDefault -> first == Nothing or second == Nothing -> special comparison won't work
+        -- use Expect.equal to at least get a nice representation
+        |> Maybe.withDefault (Expect.equal first second)
 
 
 by : Comparison b -> (a -> b) -> Comparison a
@@ -148,7 +162,7 @@ listOf comparison firstList secondList =
 
 defaultTolerance : Float
 defaultTolerance =
-    1.0e-12
+    1.0e-4
 
 
 approximately : Float -> Float -> Expectation
@@ -158,7 +172,7 @@ approximately =
 
 within : Float -> Float -> Float -> Expectation
 within tolerance =
-    expect (Scalar.equalWithin tolerance)
+    Expect.within (Expect.Absolute tolerance)
 
 
 angle : Float -> Float -> Expectation
@@ -176,7 +190,7 @@ angleWithin tolerance =
             in
             abs (atan2 (sin difference) (cos difference)) <= tolerance
     in
-    expect comparison
+    expect "OpenSolid.Geometry.Expect.angleWithin" comparison
 
 
 valueIn : Interval -> Float -> Expectation
@@ -208,7 +222,7 @@ vector2d =
 
 vector2dWithin : Float -> Vector2d -> Vector2d -> Expectation
 vector2dWithin tolerance =
-    expect (Vector2d.equalWithin tolerance)
+    expect "OpenSolid.Geometry.Expect.vector2dWithin" (Vector2d.equalWithin tolerance)
 
 
 vector3d : Vector3d -> Vector3d -> Expectation
@@ -218,7 +232,7 @@ vector3d =
 
 vector3dWithin : Float -> Vector3d -> Vector3d -> Expectation
 vector3dWithin tolerance =
-    expect (Vector3d.equalWithin tolerance)
+    expect "OpenSolid.Geometry.Expect.vector3dWithin" (Vector3d.equalWithin tolerance)
 
 
 validDirection2d : Direction2d -> Expectation
@@ -245,7 +259,7 @@ direction2d =
 
 direction2dWithin : Float -> Direction2d -> Direction2d -> Expectation
 direction2dWithin tolerance =
-    expect (Direction2d.equalWithin tolerance)
+    expect "OpenSolid.Geometry.Expect.direction2dWithin" (Direction2d.equalWithin tolerance)
 
 
 validDirection3d : Direction3d -> Expectation
@@ -272,7 +286,7 @@ direction3d =
 
 direction3dWithin : Float -> Direction3d -> Direction3d -> Expectation
 direction3dWithin tolerance =
-    expect (Direction3d.equalWithin tolerance)
+    expect "OpenSolid.Geometry.Expect.direction3dWithin" (Direction3d.equalWithin tolerance)
 
 
 point2d : Point2d -> Point2d -> Expectation
@@ -282,7 +296,7 @@ point2d =
 
 point2dWithin : Float -> Point2d -> Point2d -> Expectation
 point2dWithin tolerance =
-    expect (Point2d.equalWithin tolerance)
+    expect "OpenSolid.Geometry.Expect.point2dWithin" (Point2d.equalWithin tolerance)
 
 
 point3d : Point3d -> Point3d -> Expectation
@@ -292,12 +306,12 @@ point3d =
 
 point3dWithin : Float -> Point3d -> Point3d -> Expectation
 point3dWithin tolerance =
-    expect (Point3d.equalWithin tolerance)
+    expect "OpenSolid.Geometry.Expect.point3dWithin" (Point3d.equalWithin tolerance)
 
 
 axis2d : Axis2d -> Axis2d -> Expectation
 axis2d =
-    expect
+    expect "OpenSolid.Geometry.Expect.point3dWithin"
         (allOf
             [ by (Point2d.equalWithin defaultTolerance) Axis2d.originPoint
             , by (Direction2d.equalWithin defaultTolerance) Axis2d.direction
@@ -307,7 +321,7 @@ axis2d =
 
 axis3d : Axis3d -> Axis3d -> Expectation
 axis3d =
-    expect
+    expect "OpenSolid.Geometry.Expect.axis3d"
         (allOf
             [ by (Point3d.equalWithin defaultTolerance) Axis3d.originPoint
             , by (Direction3d.equalWithin defaultTolerance) Axis3d.direction
@@ -317,7 +331,7 @@ axis3d =
 
 plane3d : Plane3d -> Plane3d -> Expectation
 plane3d =
-    expect
+    expect "OpenSolid.Geometry.Expect.plane3d"
         (allOf
             [ by (Point3d.equalWithin defaultTolerance)
                 Plane3d.originPoint
@@ -357,7 +371,7 @@ validFrame2d =
 
 frame2d : Frame2d -> Frame2d -> Expectation
 frame2d =
-    expect
+    expect "OpenSolid.Geometry.Expect.frame2d"
         (allOf
             [ by (Point2d.equalWithin defaultTolerance) Frame2d.originPoint
             , by (Direction2d.equalWithin defaultTolerance) Frame2d.xDirection
@@ -412,7 +426,7 @@ validFrame3d =
 
 frame3d : Frame3d -> Frame3d -> Expectation
 frame3d =
-    expect
+    expect "OpenSolid.Geometry.Expect.frame3d"
         (allOf
             [ by (Point3d.equalWithin defaultTolerance) Frame3d.originPoint
             , by (Direction3d.equalWithin defaultTolerance) Frame3d.xDirection
@@ -424,7 +438,7 @@ frame3d =
 
 sketchPlane3d : SketchPlane3d -> SketchPlane3d -> Expectation
 sketchPlane3d =
-    expect
+    expect "OpenSolid.Geometry.Expect.sketchPlane3d"
         (allOf
             [ by (Point3d.equalWithin defaultTolerance)
                 SketchPlane3d.originPoint
@@ -443,7 +457,7 @@ lineSegment2d =
 
 lineSegment2dWithin : Float -> LineSegment2d -> LineSegment2d -> Expectation
 lineSegment2dWithin tolerance =
-    expect
+    expect "OpenSolid.Geometry.Expect.lineSegment2dWithin"
         (allOf
             [ by (Point2d.equalWithin tolerance) LineSegment2d.startPoint
             , by (Point2d.equalWithin tolerance) LineSegment2d.endPoint
@@ -458,7 +472,7 @@ lineSegment3d =
 
 lineSegment3dWithin : Float -> LineSegment3d -> LineSegment3d -> Expectation
 lineSegment3dWithin tolerance =
-    expect
+    expect "OpenSolid.Geometry.Expect.lineSegment3dWithin"
         (allOf
             [ by (Point3d.equalWithin tolerance) LineSegment3d.startPoint
             , by (Point3d.equalWithin tolerance) LineSegment3d.endPoint
@@ -489,7 +503,7 @@ triangle2dWithin tolerance =
                 && equalPoints firstVertex2 secondVertex2
                 && equalPoints firstVertex3 secondVertex3
     in
-    expect comparison
+    expect "OpenSolid.Geometry.Expect.triangle2dWithin" comparison
 
 
 triangle3d : Triangle3d -> Triangle3d -> Expectation
@@ -515,7 +529,7 @@ triangle3dWithin tolerance =
                 && equalPoints firstVertex2 secondVertex2
                 && equalPoints firstVertex3 secondVertex3
     in
-    expect comparison
+    expect "OpenSolid.Geometry.Expect.triangle3dWithin" comparison
 
 
 boundingBox2d : BoundingBox2d -> BoundingBox2d -> Expectation
@@ -525,7 +539,7 @@ boundingBox2d =
 
 boundingBox2dWithin : Float -> BoundingBox2d -> BoundingBox2d -> Expectation
 boundingBox2dWithin tolerance =
-    expect
+    expect "OpenSolid.Geometry.Expect.boundingBox2dWithin"
         (allOf
             [ by (Scalar.equalWithin tolerance) BoundingBox2d.minX
             , by (Scalar.equalWithin tolerance) BoundingBox2d.maxX
@@ -542,7 +556,7 @@ boundingBox3d =
 
 boundingBox3dWithin : Float -> BoundingBox3d -> BoundingBox3d -> Expectation
 boundingBox3dWithin tolerance =
-    expect
+    expect "OpenSolid.Geometry.Expect.boundingBox3dWithin"
         (allOf
             [ by (Scalar.equalWithin tolerance) BoundingBox3d.minX
             , by (Scalar.equalWithin tolerance) BoundingBox3d.maxX
@@ -561,7 +575,7 @@ polyline2d =
 
 polyline2dWithin : Float -> Polyline2d -> Polyline2d -> Expectation
 polyline2dWithin tolerance =
-    expect (by (listOf (Point2d.equalWithin tolerance)) Polyline2d.vertices)
+    expect "OpenSolid.Geometry.Expect.polyline2dWithin" (by (listOf (Point2d.equalWithin tolerance)) Polyline2d.vertices)
 
 
 polyline3d : Polyline3d -> Polyline3d -> Expectation
@@ -571,7 +585,7 @@ polyline3d =
 
 polyline3dWithin : Float -> Polyline3d -> Polyline3d -> Expectation
 polyline3dWithin tolerance =
-    expect (by (listOf (Point3d.equalWithin tolerance)) Polyline3d.vertices)
+    expect "OpenSolid.Geometry.Expect.polyline3dWithin" (by (listOf (Point3d.equalWithin tolerance)) Polyline3d.vertices)
 
 
 polygon2d : Polygon2d -> Polygon2d -> Expectation
@@ -581,12 +595,12 @@ polygon2d =
 
 polygon2dWithin : Float -> Polygon2d -> Polygon2d -> Expectation
 polygon2dWithin tolerance =
-    expect (by (listOf (Point2d.equalWithin tolerance)) Polygon2d.vertices)
+    expect "OpenSolid.Geometry.Expect.polygon2dWithin" (by (listOf (Point2d.equalWithin tolerance)) Polygon2d.vertices)
 
 
 circle2d : Circle2d -> Circle2d -> Expectation
 circle2d =
-    expect
+    expect "OpenSolid.Geometry.Expect.circle2d"
         (allOf
             [ by (Point2d.equalWithin defaultTolerance) Circle2d.centerPoint
             , by (Scalar.equalWithin defaultTolerance) Circle2d.radius
@@ -596,7 +610,7 @@ circle2d =
 
 circle3d : Circle3d -> Circle3d -> Expectation
 circle3d =
-    expect
+    expect "OpenSolid.Geometry.Expect.circle3d"
         (allOf
             [ by (Point3d.equalWithin defaultTolerance)
                 Circle3d.centerPoint
@@ -610,7 +624,7 @@ circle3d =
 
 arc2d : Arc2d -> Arc2d -> Expectation
 arc2d =
-    expect
+    expect "OpenSolid.Geometry.Expect.arc2d"
         (allOf
             [ by (Point2d.equalWithin defaultTolerance) Arc2d.centerPoint
             , by (Point2d.equalWithin defaultTolerance) Arc2d.startPoint
@@ -619,9 +633,19 @@ arc2d =
         )
 
 
+arc2dEvaluation : ( Point2d, Vector2d ) -> ( Point2d, Vector2d ) -> Expectation
+arc2dEvaluation =
+    expect "OpenSolid.Geometry.Expect.arc2dEvaluation"
+        (allOf
+            [ by (Point2d.equalWithin defaultTolerance) Tuple.first
+            , by (Vector2d.equalWithin defaultTolerance) Tuple.second
+            ]
+        )
+
+
 arc3d : Arc3d -> Arc3d -> Expectation
 arc3d =
-    expect
+    expect "OpenSolid.Geometry.Expect.arc3d"
         (allOf
             [ by (Point3d.equalWithin defaultTolerance) Arc3d.centerPoint
             , by (Direction3d.equalWithin defaultTolerance)
@@ -634,7 +658,7 @@ arc3d =
 
 quadraticSpline2d : QuadraticSpline2d -> QuadraticSpline2d -> Expectation
 quadraticSpline2d =
-    expect
+    expect "OpenSolid.Geometry.Expect.quadraticSpline2d"
         (\firstSpline secondSpline ->
             let
                 ( p1, p2, p3 ) =
@@ -652,7 +676,7 @@ quadraticSpline2d =
 
 quadraticSpline3d : QuadraticSpline3d -> QuadraticSpline3d -> Expectation
 quadraticSpline3d =
-    expect
+    expect "OpenSolid.Geometry.Expect.QuadraticSpline3d"
         (\firstSpline secondSpline ->
             let
                 ( p1, p2, p3 ) =
@@ -670,7 +694,7 @@ quadraticSpline3d =
 
 cubicSpline2d : CubicSpline2d -> CubicSpline2d -> Expectation
 cubicSpline2d =
-    expect
+    expect "OpenSolid.Geometry.Expect.cubicSpline2d"
         (\firstSpline secondSpline ->
             let
                 ( p1, p2, p3, p4 ) =
@@ -688,7 +712,7 @@ cubicSpline2d =
 
 cubicSpline3d : CubicSpline3d -> CubicSpline3d -> Expectation
 cubicSpline3d =
-    expect
+    expect "OpenSolid.Geometry.Expect.cubic"
         (\firstSpline secondSpline ->
             let
                 ( p1, p2, p3, p4 ) =
